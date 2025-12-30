@@ -51,18 +51,28 @@
             margin-bottom: 10px;
         }
 
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], textarea {
             flex: 1;
             padding: 12px;
             border: 2px solid #e9ecef;
             border-radius: 10px;
             font-size: 16px;
             transition: border-color 0.3s;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
 
-        input[type="text"]:focus, input[type="number"]:focus {
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
+        }
+
+        .full-width {
+            width: 100%;
         }
 
         .btn {
@@ -159,10 +169,33 @@
             color: #dc3545;
         }
 
+        .med-meta {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
         .med-details {
             margin-top: 15px;
             padding-top: 15px;
             border-top: 2px solid #e9ecef;
+        }
+
+        .med-field {
+            margin-bottom: 15px;
+        }
+
+        .med-field-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .med-field-value {
+            color: #212529;
+            font-size: 15px;
+            line-height: 1.5;
         }
 
         .action-group {
@@ -186,6 +219,24 @@
             color: white;
             width: 100%;
             margin-top: 10px;
+        }
+
+        .backup-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            flex: 1;
+        }
+
+        .hidden {
+            display: none;
         }
 
         .empty-state {
@@ -213,6 +264,12 @@
                 <input type="text" id="medName" placeholder="Medication name" />
                 <input type="number" id="medQuantity" placeholder="Qty" min="0" value="0" />
             </div>
+            <div class="input-group">
+                <input type="text" id="medDosage" placeholder="Dosage (e.g., 500mg, 2 tablets)" class="full-width" />
+            </div>
+            <div class="input-group">
+                <textarea id="medNotes" placeholder="Notes (optional)" class="full-width"></textarea>
+            </div>
             <button class="btn btn-primary" onclick="addMedication()" style="width: 100%;">
                 Add Medication
             </button>
@@ -225,6 +282,16 @@
                 </svg>
                 <p>No medications added yet.<br>Add your first medication above.</p>
             </div>
+        </div>
+
+        <div class="backup-section">
+            <button class="btn btn-secondary" onclick="exportData()">
+                📥 Export Backup
+            </button>
+            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">
+                📤 Import Backup
+            </button>
+            <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(event)" />
         </div>
     </div>
 
@@ -251,9 +318,13 @@
         function addMedication() {
             const nameInput = document.getElementById('medName');
             const quantityInput = document.getElementById('medQuantity');
+            const dosageInput = document.getElementById('medDosage');
+            const notesInput = document.getElementById('medNotes');
             
             const name = nameInput.value.trim();
             const quantity = parseInt(quantityInput.value) || 0;
+            const dosage = dosageInput.value.trim();
+            const notes = notesInput.value.trim();
 
             if (!name) {
                 alert('Please enter a medication name');
@@ -263,7 +334,9 @@
             medications.push({
                 id: Date.now(),
                 name: name,
-                quantity: quantity
+                quantity: quantity,
+                dosage: dosage,
+                notes: notes
             });
 
             saveMedications();
@@ -271,6 +344,8 @@
 
             nameInput.value = '';
             quantityInput.value = '0';
+            dosageInput.value = '';
+            notesInput.value = '';
             nameInput.focus();
         }
 
@@ -304,6 +379,54 @@
                 adjustQuantity(id, type === 'add' ? amount : -amount);
                 input.value = '';
             }
+        }
+
+        // Export data as JSON file
+        function exportData() {
+            const dataStr = JSON.stringify(medications, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `medication-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            alert('Backup exported successfully!');
+        }
+
+        // Import data from JSON file
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    // Validate data structure
+                    if (!Array.isArray(importedData)) {
+                        throw new Error('Invalid backup file format');
+                    }
+
+                    if (medications.length > 0) {
+                        if (!confirm('This will replace your current medications. Continue?')) {
+                            return;
+                        }
+                    }
+
+                    medications = importedData;
+                    saveMedications();
+                    renderMedications();
+                    alert('Backup imported successfully!');
+                } catch (error) {
+                    alert('Error importing backup: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset file input
         }
 
         // Toggle medication details
@@ -372,9 +495,22 @@
                         <div class="med-info" onclick="toggleMedication(${med.id})">
                             <div class="med-name">${med.name}</div>
                             <div class="med-quantity ${isLow ? 'low' : ''}">${med.quantity} units</div>
+                            ${med.dosage ? `<div class="med-meta">Dosage: ${med.dosage}</div>` : ''}
                         </div>
                         ${isActive ? `
                             <div class="med-details" onclick="event.stopPropagation()">
+                                ${med.dosage ? `
+                                    <div class="med-field">
+                                        <div class="med-field-label">Dosage</div>
+                                        <div class="med-field-value">${med.dosage}</div>
+                                    </div>
+                                ` : ''}
+                                ${med.notes ? `
+                                    <div class="med-field">
+                                        <div class="med-field-label">Notes</div>
+                                        <div class="med-field-value">${med.notes}</div>
+                                    </div>
+                                ` : ''}
                                 <div class="action-group">
                                     <div class="action-input">
                                         <input type="number" id="addInput-${med.id}" min="1" placeholder="Add" />
@@ -407,6 +543,9 @@
                 if (e.key === 'Enter') addMedication();
             });
             document.getElementById('medQuantity').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addMedication();
+            });
+            document.getElementById('medDosage').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') addMedication();
             });
             
