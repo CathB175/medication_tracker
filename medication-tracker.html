@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medication Stock Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .add-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"], input[type="number"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-success:active, .btn-danger:active {
+            transform: scale(0.95);
+        }
+
+        .medication-list {
+            padding: 20px;
+        }
+
+        .med-item {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .med-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .med-item.active {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .drag-handle {
+            font-size: 24px;
+            color: #adb5bd;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .med-info {
+            flex: 1;
+        }
+
+        .med-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 5px;
+        }
+
+        .med-quantity {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .med-quantity.low {
+            color: #dc3545;
+        }
+
+        .med-details {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .action-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .action-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .action-input input {
+            width: 100px;
+        }
+
+        .delete-btn {
+            background: #6c757d;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💊 Medication Stock Monitor</h1>
+        </div>
+
+        <div class="add-section">
+            <div class="input-group">
+                <input type="text" id="medName" placeholder="Medication name" />
+                <input type="number" id="medQuantity" placeholder="Qty" min="0" value="0" />
+            </div>
+            <button class="btn btn-primary" onclick="addMedication()" style="width: 100%;">
+                Add Medication
+            </button>
+        </div>
+
+        <div class="medication-list" id="medicationList">
+            <div class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                </svg>
+                <p>No medications added yet.<br>Add your first medication above.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let medications = [];
+        let selectedMedId = null;
+        let draggedElement = null;
+
+        // Load medications from storage
+        function loadMedications() {
+            const stored = localStorage.getItem('medications');
+            if (stored) {
+                medications = JSON.parse(stored);
+            }
+            renderMedications();
+        }
+
+        // Save medications to storage
+        function saveMedications() {
+            localStorage.setItem('medications', JSON.stringify(medications));
+        }
+
+        // Add new medication
+        function addMedication() {
+            const nameInput = document.getElementById('medName');
+            const quantityInput = document.getElementById('medQuantity');
+            
+            const name = nameInput.value.trim();
+            const quantity = parseInt(quantityInput.value) || 0;
+
+            if (!name) {
+                alert('Please enter a medication name');
+                return;
+            }
+
+            medications.push({
+                id: Date.now(),
+                name: name,
+                quantity: quantity
+            });
+
+            saveMedications();
+            renderMedications();
+
+            nameInput.value = '';
+            quantityInput.value = '0';
+            nameInput.focus();
+        }
+
+        // Delete medication
+        function deleteMedication(id) {
+            if (confirm('Are you sure you want to delete this medication?')) {
+                medications = medications.filter(med => med.id !== id);
+                selectedMedId = null;
+                saveMedications();
+                renderMedications();
+            }
+        }
+
+        // Adjust quantity
+        function adjustQuantity(id, amount) {
+            const med = medications.find(m => m.id === id);
+            if (med) {
+                med.quantity = Math.max(0, med.quantity + amount);
+                saveMedications();
+                renderMedications();
+            }
+        }
+
+        // Custom adjust quantity
+        function customAdjust(id, type) {
+            const inputId = type === 'add' ? `addInput-${id}` : `subtractInput-${id}`;
+            const input = document.getElementById(inputId);
+            const amount = parseInt(input.value) || 0;
+            
+            if (amount > 0) {
+                adjustQuantity(id, type === 'add' ? amount : -amount);
+                input.value = '';
+            }
+        }
+
+        // Toggle medication details
+        function toggleMedication(id) {
+            selectedMedId = selectedMedId === id ? null : id;
+            renderMedications();
+        }
+
+        // Drag and drop functions
+        function handleDragStart(e, index) {
+            draggedElement = index;
+            e.target.style.opacity = '0.4';
+        }
+
+        function handleDragEnd(e) {
+            e.target.style.opacity = '1';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            return false;
+        }
+
+        function handleDrop(e, dropIndex) {
+            e.stopPropagation();
+            
+            if (draggedElement !== dropIndex) {
+                const draggedItem = medications[draggedElement];
+                medications.splice(draggedElement, 1);
+                medications.splice(dropIndex, 0, draggedItem);
+                saveMedications();
+                renderMedications();
+            }
+            
+            return false;
+        }
+
+        // Render medications
+        function renderMedications() {
+            const listContainer = document.getElementById('medicationList');
+            
+            if (medications.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        <p>No medications added yet.<br>Add your first medication above.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listContainer.innerHTML = medications.map((med, index) => {
+                const isActive = selectedMedId === med.id;
+                const isLow = med.quantity < 10;
+                
+                return `
+                    <div class="med-item ${isActive ? 'active' : ''}" 
+                         draggable="true"
+                         ondragstart="handleDragStart(event, ${index})"
+                         ondragend="handleDragEnd(event)"
+                         ondragover="handleDragOver(event)"
+                         ondrop="handleDrop(event, ${index})">
+                        <div class="drag-handle">☰</div>
+                        <div class="med-info" onclick="toggleMedication(${med.id})">
+                            <div class="med-name">${med.name}</div>
+                            <div class="med-quantity ${isLow ? 'low' : ''}">${med.quantity} units</div>
+                        </div>
+                        ${isActive ? `
+                            <div class="med-details" onclick="event.stopPropagation()">
+                                <div class="action-group">
+                                    <div class="action-input">
+                                        <input type="number" id="addInput-${med.id}" min="1" placeholder="Add" />
+                                        <button class="btn btn-success" onclick="customAdjust(${med.id}, 'add')">
+                                            Restock
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="action-group">
+                                    <div class="action-input">
+                                        <input type="number" id="subtractInput-${med.id}" min="1" placeholder="Take" />
+                                        <button class="btn btn-danger" onclick="customAdjust(${med.id}, 'subtract')">
+                                            Take Dose
+                                        </button>
+                                    </div>
+                                </div>
+                                <button class="btn delete-btn" onclick="deleteMedication(${med.id})">
+                                    Delete Medication
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Allow Enter key to add medication
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('medName').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addMedication();
+            });
+            document.getElementById('medQuantity').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addMedication();
+            });
+            
+            loadMedications();
+        });
+    </script>
+</body>
+</html>
